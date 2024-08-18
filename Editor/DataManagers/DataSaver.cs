@@ -1,74 +1,84 @@
 using System;
 using System.IO;
+using Unity.Plastic.Newtonsoft.Json;
 using UnityEngine;
 
-namespace PiData{
-public static class DataSaver
+namespace PiData
 {
-    private static string GetFilePath<T>(string fileName)
+    public static class DataSaver
     {
-        return Path.Combine(Application.persistentDataPath, fileName + ".json");
-    }
-
-    public static void SaveData<T>(T data, string fileName)
-    {
-        try
+        private static string GetFilePath<T>(string fileName)
         {
-            string filePath = GetFilePath<T>(fileName);
-            string json = JsonUtility.ToJson(data);
-            File.WriteAllText(filePath, json);
-            Debug.Log($"Data of type {typeof(T)} saved successfully to {filePath}");
+            return Path.Combine(Application.persistentDataPath, fileName + ".json");
         }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to save data of type {typeof(T)}: {e.Message}");
-        }
-    }
 
-    public static T LoadData<T>(string fileName) where T : new()
-    {
-        try
+        public static void SaveData<T>(T data, string fileName)
         {
-            string filePath = GetFilePath<T>(fileName);
-            if (File.Exists(filePath))
+            try
             {
-                string json = File.ReadAllText(filePath);
-                T data = JsonUtility.FromJson<T>(json);
-                Debug.Log($"Data of type {typeof(T)} loaded successfully from {filePath}");
-                return data;
+                string filePath = GetFilePath<T>(fileName);
+                string contents = JsonConvert.SerializeObject(data, Formatting.Indented);
+                File.WriteAllText(filePath, contents);
+                Debug.Log($"Data of type {typeof(T)} saved successfully to {filePath}");
             }
-            else
+            catch (Exception ex)
             {
+                Debug.LogError($"Failed to save data of type {typeof(T)}: {ex.Message}");
+            }
+        }
+
+        public static T LoadData<T>(string fileName) where T : new()
+        {
+            try
+            {
+                string filePath = GetFilePath<T>(fileName);
+                if (File.Exists(filePath))
+                {
+                    string json = File.ReadAllText(filePath);
+                    T result = JsonConvert.DeserializeObject<T>(json);
+                    Debug.Log($"Data of type {typeof(T)} loaded successfully from {filePath}");
+                    return result;
+                }
+
                 Debug.LogWarning($"Save file not found for {filePath}, returning new {typeof(T)} instance.");
                 return new T();
             }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to load data of type {typeof(T)}: {ex.Message}");
+                return new T();
+            }
         }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to load data of type {typeof(T)}: {e.Message}");
-            return new T();
-        }
-    }
 
-    public static void DeleteData<T>(string fileName)
-    {
-        try
+        public static void DeleteData<T>(string fileName)
         {
-            string filePath = GetFilePath<T>(fileName);
-            if (File.Exists(filePath))
+            try
             {
-                File.Delete(filePath);
-                Debug.Log($"Data of type {typeof(T)} deleted successfully from {filePath}");
+                string filePath = GetFilePath<T>(fileName);
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    Debug.Log($"Data of type {typeof(T)} deleted successfully from {filePath}");
+                }
+                else
+                {
+                    Debug.LogWarning("Save file not found for " + filePath);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Debug.LogWarning($"Save file not found for {filePath}");
+                Debug.LogError($"Failed to delete data of type {typeof(T)}: {ex.Message}");
             }
         }
-        catch (Exception e)
+
+        public static void SaveFloat(float data, string fileName)
         {
-            Debug.LogError($"Failed to delete data of type {typeof(T)}: {e.Message}");
+            SaveData(data, fileName);
+        }
+
+        public static float LoadFloat(string fileName)
+        {
+            return LoadData<float>(fileName);
         }
     }
 }
- }
